@@ -41,7 +41,9 @@ public class Proj1{
 
         private String targetGram = null;
         private int funcNum = 0;
-        
+
+
+        private Text wrd = new Text();
 
         /*
          * Setup gets called exactly once for each mapper, before map() gets called the first time.
@@ -64,22 +66,21 @@ public class Proj1{
                 Func func = funcFromNum(funcNum); // sets the value of f(d)....which method of map to use (generalized or basic) 
                 
                 // YOUR CODE HERE
-            
-                private Text text = new Text();
+
                 
                 //create a HashMap with key-value pairs. Key is the current word, and array list is all the indices of which the word appears in the corpus. (key: (index 1, index 2...))
-                HashMap<String, ArrayList<double>> wi_map = new HashMap<String, ArrayList<double>>();
+                HashMap<String, ArrayList<Double>> wi_map = new HashMap<String, ArrayList<Double>>();
                 double index = 0;
 
                 while (matcher.find()) {
-                    String word = text.set(matcher.group().toLowerCase());
-                    if (wi_map.containsKey(word)) {
-                        wi_map.get(word).add(index); // if word already in hashtable, add the index to the arraylist value
+                    wrd.set(matcher.group().toLowerCase());
+                    if (wi_map.containsKey(wrd.toString())) {
+                        wi_map.get(wrd.toString()).add(index); // if word already in hashtable, add the index to the arraylist value
                     }                    
                     else {
-                        ArrayList<double> new = new ArrayList<double>();
-                        new.add(index);
-                        wi_map.put(word, new); // make a new key-value pair (word, [index#]) if word not in HashTable
+                        ArrayList newarray = new ArrayList();
+                        newarray.add(index);
+                        wi_map.put(wrd.toString(), newarray); // make a new key-value pair (word, [index#]) if word not in HashTable
                     }
                      index++;
                 }
@@ -89,47 +90,50 @@ public class Proj1{
 
                 Mapper will output: (word, f(dw)) */
 
-                (ArrayList) tglist = wi_map.get(targetGram); // this list includes the indices of targetGram
+                ArrayList tglist = (ArrayList) wi_map.get(targetGram); // this list includes the indices of targetGram
                 //iterate through hash table to get each array => calculate min distance
+                String curword;
+                for (Map.Entry<String, ArrayList<Double>> entry: wi_map.entrySet()) {
 
-                Iterator all_words =  wi_map.entrySet().iterator();
+               // Iterator all_words =  wi_map.entrySet().iterator();
 
-                while (all_words.hasNext()) {
-                    String curword = (String)wi_map.keys().nextElement();
+               // while (all_words.hasNext()) {
+                    //String curword = wi_map.keys().nextElement();
+                    curword = entry.getKey();
                     ArrayList curlist = (ArrayList)wi_map.get(curword);
 
                     if (!curword.equals(targetGram)) {
-                        curlistsize = curlist.size();
+                        double curlistsize = curlist.size();
                         int start = 0;
 
 
                         while (start<curlistsize) {
                             boolean first = false;
-                            double curnum = curlist[start];
+                            double curnum = (curlist.get(start)).getDouble();
                             int i = 0;
-                            int j = (tglist.size() - 1)
+                            int j = (tglist.size() - 1);
                             double min; 
 
 
                             //Case 1: tglist empty
-                            if (j.equals(-1)) {
+                            if (j==(-1)) {
                                 min= Double.POSITIVE_INFINITY;
                                 first=true;
                             }
                 
                             //Case 2: there is only one thing in the tglist
-                             if (i.equals(j)) {
+                             if (i==j) {
                                 min= (Math.abs(listnum-tglist[i]));
                                 first=true;
                             }
                             
                             //Case 3: only do this when there are 2+ things in tglist/Case 1 and 2 are false
-                            if (!first.equals(true)) {
+                            if (first==false) {
                             double min=findmin(curnum, tglist); 
                          }
 
                             start++;
-                            double writeval = (min.equals(Integer.MAX_VALUE)? 0: (func.f(min));
+                            double writeval = (min.equals(Integer.MAX_VALUE)? 0: (func.f(min)));
                             context.write(new Text(curword), new Text("" + func.f(writeval) + ""));
 
                         }
@@ -143,27 +147,27 @@ public class Proj1{
         /** Function to find min distance */
         public double findmin(double listnum, ArrayList tglist) {
                 int i = 0;
-                int j = (tglist.size() - 1)
-                boolean continue = true;
+                int j = (tglist.size() - 1);
+                boolean cont = true;
                 //find out whether min is in front or back of ordered list
-                double minbeg = (Math.abs(listnum - tglist[i]));
-                double minend = (Math.abs(listnum-tglist[j]));  // case if equal? 
+                double minbeg = (Math.abs(listnum - tglist.get(i)));
+                double minend = (Math.abs(listnum-tglist.get(j)));  // case if equal? 
 
                 //Rare Case 1
-                if (minbeg.equals(minend)) {
-                    minbeg = (Math.abs(listnum - tglist[i+1]));
+                if (minbeg==minend) {
+                    minbeg = (Math.abs(listnum - tglist.get(i+1)));
                 }
 
                 double min = Math.min(minbeg,minend);
 
                 //Case 1
-                if (min.equals(minbeg)) {
+                if (min==minbeg) {
                     //find min from beg
-                    while (continue & (!i>=j)) {
+                    while (cont & ((i>=j)==false)) {
                         i++;
-                        double tempmin = (Math.abs(listnum-tglist[i]));
+                        double tempmin = (Math.abs(listnum-tglist.get(i)));
                          if (min<tempmin) {
-                          continue = false;
+                          cont = false;
                       }
                       else  {
                         min=tempmin;
@@ -173,13 +177,13 @@ public class Proj1{
 
 
                 //Case 2
-                if (min.equals(minend)) {
+                if (min==minend) {
                     //find min from beg
-                    while (continue & (!j<=i)) {
+                    while (cont & ((j<=i)==false)) {
                         j--;
-                        double tempmin = (Math.abs(listnum-tglist[j]));
+                        double tempmin = (Math.abs(listnum-tglist.get(j)));
                          if (min<tempmin) {
-                          continue = false;
+                          cont = false;
                       }
                       else {
                         min=tempmin;
@@ -306,6 +310,8 @@ public class Proj1{
      *  invoke combiners, it's an error to assume anything about how many times
      *  values will be combined.
      */
+
+
     public static void main(String[] rawArgs) throws Exception {
         GenericOptionsParser parser = new GenericOptionsParser(rawArgs);
         Configuration conf = parser.getConfiguration();
