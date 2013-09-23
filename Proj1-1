@@ -20,6 +20,12 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
+
+
+
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.DoubleWritable;
+
 /*
  * This is the skeleton for CS61c project 1, Fall 2013.
  *
@@ -32,18 +38,21 @@ import org.apache.hadoop.util.GenericOptionsParser;
 
 public class Proj1{
 
+
+
+
     /*
      * Inputs is a set of (docID, document contents) pairs.
      */
-    public static class Map1 extends Mapper<WritableComparable, Text, Text, Text> {
+    public static class Map1 extends Mapper<WritableComparable, Text, Text, DoublePair> {
         /** Regex pattern to find words (alphanumeric + _). */
         final static Pattern WORD_PATTERN = Pattern.compile("\\w+");
 
         private String targetGram = null;
         private int funcNum = 0;
-
-
         private Text wrd = new Text();
+
+
 
         /*
          * Setup gets called exactly once for each mapper, before map() gets called the first time.
@@ -90,29 +99,28 @@ public class Proj1{
 
                 Mapper will output: (word, f(dw)) */
 
-                ArrayList tglist = (ArrayList) wi_map.get(targetGram); // this list includes the indices of targetGram
+                ArrayList<Double> tglist = (ArrayList<Double>) wi_map.get(targetGram); // this list includes the indices of targetGram
                 //iterate through hash table to get each array => calculate min distance
                 String curword;
+                if (tglist!=null) {
+
+
                 for (Map.Entry<String, ArrayList<Double>> entry: wi_map.entrySet()) {
 
-               // Iterator all_words =  wi_map.entrySet().iterator();
-
-               // while (all_words.hasNext()) {
-                    //String curword = wi_map.keys().nextElement();
                     curword = entry.getKey();
-                    ArrayList curlist = (ArrayList)wi_map.get(curword);
+                    ArrayList<Double> curlist = (ArrayList<Double>)wi_map.get(curword);
 
                     if (!curword.equals(targetGram)) {
                         double curlistsize = curlist.size();
                         int start = 0;
-
+                        
 
                         while (start<curlistsize) {
                             boolean first = false;
-                            double curnum = (curlist.get(start)).getDouble();
+                            double curnum = (curlist.get(start));
                             int i = 0;
-                            int j = (tglist.size() - 1);
-                            double min; 
+                            int j = (tglist.size()-1);
+                            double min = 0; 
 
 
                             //Case 1: tglist empty
@@ -123,29 +131,41 @@ public class Proj1{
                 
                             //Case 2: there is only one thing in the tglist
                              if (i==j) {
-                                min= (Math.abs(listnum-tglist[i]));
+                                min= (Math.abs(curnum-tglist.get(i)));
                                 first=true;
                             }
                             
                             //Case 3: only do this when there are 2+ things in tglist/Case 1 and 2 are false
                             if (first==false) {
-                            double min=findmin(curnum, tglist); 
+                             min=findmin(curnum, tglist); 
                          }
 
                             start++;
-                            double writeval = (min.equals(Integer.MAX_VALUE)? 0: (func.f(min)));
-                            context.write(new Text(curword), new Text("" + func.f(writeval) + ""));
-
+                            double fin =0.0;
+                            if (min==Integer.MAX_VALUE) {
+                                fin = 0.0;
+                            }
+                            else {
+                                fin=func.f(min);
+                            
+                            }
+                            context.write(new Text(curword), new DoublePair(1, fin));
+  
                         }
                     }
                 }
             }
-
+        }
             
+
+
+
+
+
 
               
         /** Function to find min distance */
-        public double findmin(double listnum, ArrayList tglist) {
+        public double findmin(double listnum, ArrayList<Double> tglist) {
                 int i = 0;
                 int j = (tglist.size() - 1);
                 boolean cont = true;
@@ -163,7 +183,7 @@ public class Proj1{
                 //Case 1
                 if (min==minbeg) {
                     //find min from beg
-                    while (cont & ((i>=j)==false)) {
+                    while (cont) {
                         i++;
                         double tempmin = (Math.abs(listnum-tglist.get(i)));
                          if (min<tempmin) {
@@ -179,7 +199,7 @@ public class Proj1{
                 //Case 2
                 if (min==minend) {
                     //find min from beg
-                    while (cont & ((j<=i)==false)) {
+                    while (cont) {
                         j--;
                         double tempmin = (Math.abs(listnum-tglist.get(j)));
                          if (min<tempmin) {
@@ -228,38 +248,50 @@ public class Proj1{
     }
 
     /** Here's where you'll be implementing your combiner. It must be non-trivial for you to receive credit. */
-    public static class Combine1 extends Reducer<Text, Text, Text, Text> {
+    public static class Combine1 extends Reducer<Text, DoublePair, Text, DoublePair> {
 
         @Override
-            public void reduce(Text key, Iterable<Text> values,
+            public void reduce(Text key, Iterable<DoublePair> values,
                     Context context) throws IOException, InterruptedException {
 
                  //Lab02 reference: key =  word, put Aw and Sw into a String as the value; in reduce phase, parse string and get the value
                 double aw = 0;
                 double sw = 0;
-                for (Text fdw: values) {
+                for (DoublePair fdw: values) {
                     //turn text to string to double
-                    double value = Double.parseDouble(fdw.toString());
-                    aw+=1;
-                    sw+=value;
+                    aw += fdw.getDouble1();
+                    sw+=fdw.getDouble2();
                 }
-                String newval = "" + aw + " " + sw + ""; // combine all occurences and sum of f(dw) into a single string
-                context.write(key, new Text(newval));
-
+                context.write(key, new DoublePair(aw,sw));
+        
             }
     }
 
 
-    public static class Reduce1 extends Reducer<Text, Text, DoubleWritable, Text> {
-        @Override
-            public void reduce(Text key, Iterable<Text> values,
+    public static class Reduce1 extends Reducer<Text, DoublePair, DoubleWritable, Text> {
+       // @Override
+            public void reduce(Text key, Iterable<DoublePair> values,
                     Context context) throws IOException, InterruptedException {
-
+               // System.out.println("reduce1 reached");
                 //keys-value pair input is : ' (word, "aw, sw") ' 
-                /*for (Text awswpair: values) {
-                    Double awswString[] = awspair.toString.split(" ");
-                    double aw = 
-                    double sw =*/
+                double aw=0;
+                double sw=0;
+                double calc=0;
+                //essentially does exactly what combiner does (: However, if already ran through combiner, then the aw, sw pair are added just once
+
+                for (DoublePair pair: values) {
+                    aw += pair.getDouble1();
+                    sw+=pair.getDouble2();
+
+                }
+                if (sw>0) {
+                 calc = sw*Math.pow(Math.log10(sw), 3)/aw;
+                }
+                
+                context.write(new DoubleWritable(-calc), key); //-calc. 
+
+
+
 
             }
     }
@@ -290,10 +322,12 @@ public class Proj1{
         @Override
             public void reduce(DoubleWritable key, Iterable<Text> values,
                     Context context) throws IOException, InterruptedException {
-
-                 // YOUR CODE HERE
-
-            }
+                for (Text wrd: values) {
+                    DoubleWritable use = new DoubleWritable(Math.abs(key.get()));
+                    context.write(use, wrd);   //values should FINALLY be in right order -_-
+                    } 
+                }
+            
     }
 
     /*
@@ -355,7 +389,7 @@ public class Proj1{
 
             /* You may need to change things here */
             firstJob.setMapOutputKeyClass(Text.class);
-            firstJob.setMapOutputValueClass(Text.class);
+            firstJob.setMapOutputValueClass(DoublePair.class);
             firstJob.setOutputKeyClass(DoubleWritable.class);
             firstJob.setOutputValueClass(Text.class);
             /* End region where we expect you to perhaps need to change things. */
