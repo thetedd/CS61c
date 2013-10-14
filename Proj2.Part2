@@ -130,7 +130,7 @@ void execute_instruction(Instruction instruction,Processor* processor,Byte *memo
             
         case 0x4: // opcode == 0x4 (BEQ)
             if (processor->R[instruction.itype.rs] ==processor->R[instruction.itype.rt]) {
-                processor->PC = (processor->PC + 4+ ((sWord)instruction.itype.imm<<2));
+                processor->PC = processor->PC + 4+ (sWord)(instruction.itype.imm<<2);
             }
                 else {
                     processor->PC=+4;
@@ -138,11 +138,11 @@ void execute_instruction(Instruction instruction,Processor* processor,Byte *memo
             break;
             
         case 0x5: // opcode == 0x5 (BNE)
-            if (processor->R[instruction.itype.rs] != processor->R[instruction.itype.rt]) {
-                processor->PC = (processor->PC + 4 + ((sWord)instruction.itype.imm<<2));
+            if (processor->R[instruction.itype.rs] != processor->R[instruction.itype.rt]){
+                processor->PC = processor->PC + 4 + (sWord) (instruction.itype.imm << 2);
             }
-            else {
-                processor->PC=processor->PC+4;
+            else{
+                processor->PC += 4;
             }
             break;
             
@@ -184,7 +184,7 @@ void execute_instruction(Instruction instruction,Processor* processor,Byte *memo
         case 0x20: // opcode == 0x20 (LB)
         {
             align=LENGTH_BYTE;
-            processor->R[instruction.itype.rt] = load(memory, processor->R[instruction.itype.rs] + (sHalf)instruction.itype.imm,align);
+            processor->R[instruction.itype.rt] = (sWord)load(memory, processor->R[instruction.itype.rs] + (sHalf)instruction.itype.imm,align);
             processor->PC=processor->PC+4;
 
             break;
@@ -192,7 +192,7 @@ void execute_instruction(Instruction instruction,Processor* processor,Byte *memo
         case 0x21: // opcode == 0x21 (LH)
         {
             align=LENGTH_HALF_WORD;
-            processor->R[instruction.itype.rt] = (sWord)load(memory, processor->R[instruction.itype.rs] + (sHalf)instruction.itype.imm,align);
+            processor->R[instruction.itype.rt] = (sWord)load(memory, processor->R[instruction.itype.rs] + ((sHalf)instruction.itype.imm),align);
             processor->PC=processor->PC+4;
 
             break;
@@ -268,7 +268,7 @@ void store(Byte *memory,Address address,Alignment alignment,Word value) {
     
     }
     //memory points to first thing in memory; add the address to it
-    Word store = address;
+   /* Word store = address;
     if (alignment==LENGTH_BYTE){
         *(memory+address) = (store & 0x000000FF);
         store=store>>8;
@@ -285,10 +285,15 @@ void store(Byte *memory,Address address,Alignment alignment,Word value) {
     for (j=0; j<alignment; j++){
         *(memory+j+address) = store;
     }
-    }
+    }*/
     
     /* YOUR CODE HERE */
-    
+    int i;
+	Word store = value;
+	for(i = 0; i < alignment; i++){
+        *(memory+i+address) = (store & 0x000000FF);
+		store = store >> 8;
+    }
 }
 
 
