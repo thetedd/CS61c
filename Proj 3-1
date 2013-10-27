@@ -9,19 +9,19 @@ int conv2D(float* in, float* out, int data_size_X, int data_size_Y,
 
 
     
-    
+    int y, x; //initial declaration ... used in for loops
     __m128 k0,k1,k2,k3,k4,k5,k6,k7,k8, m0,target, a0;
     
     //k vecs are vectors of each number in the kernal
-    k0 = _mm_set1_epi32(kernal[0]);
-    k1 = _mm_set1_epi32(kernal[1]);
-    k2 = _mm_set1_epi32(kernal[2]);
-    k3 = _mm_set1_epi32(kernal[3]);
-    k4 = _mm_set1_epi32(kernal[4]);
-    k5 = _mm_set1_epi32(kernal[5]);
-    k6 = _mm_set1_epi32(kernal[6]);
-    k7 = _mm_set1_epi32(kernal[7]);
-    k8 = _mm_set1_epi32(kernal[8]);
+    k0 = _mm_set1_ps(kernel[0]);
+    k1 = _mm_set1_ps(kernel[1]);
+    k2 = _mm_set1_ps(kernel[2]);
+    k3 = _mm_set1_ps(kernel[3]);
+    k4 = _mm_set1_ps(kernel[4]);
+    k5 = _mm_set1_ps(kernel[5]);
+    k6 = _mm_set1_ps(kernel[6]);
+    k7 = _mm_set1_ps(kernel[7]);
+    k8 = _mm_set1_ps(kernel[8]);
 
     
     
@@ -34,77 +34,79 @@ int conv2D(float* in, float* out, int data_size_X, int data_size_Y,
      
      
      
-    /* flipped kernal: 8 5 2cases
-    
+    /* flipped kernal: 8 5 2 cases
+     
+     
+    Update: use _mm_loadu_ps not _mm_loadu_ps! 
+ 
      
     kern 8*/
-        for (int y =0; y<PADDED_data_size_Y;y+=1) {
-            for (int x=0;x<PADDED_data_size_X;x+=4)) { // ASSUME PADDED IN ARRAY
-                m0 = (_mm_mul_ps(k8, _mm_loadu_si128( (__m128i*)(PADDED_in[x])))); //k8 
-                target = _mm_loadu_si128((__m128*)PADDED_out[x+1][y+1]);
-                a0 = _mm_add_epi32(m0,target); // integrate relevant elements .... return added multiplied vector to pointer vector
-                _mm_store_ps128 (( m128i *) PADDED_out[x+1][y+1], add); //add multiplied vector to OUT array (ASSUMING PADDED OUT)
+        for (y =0; y<data_size_Y;y+=1) { //PADDED_data_size_Y .... changed to data_size_y due to testing 
+            for (x=0;x<data_size_X;x+=4) { // ASSUME PADDED IN ARRAY
+                m0 = _mm_mul_ps(k8, _mm_loadu_ps(in+x)); //k8
+                target = _mm_loadu_ps((out+ (x+1) +(y+1)*data_size_X)); //out[x+1][y+1]);
+                a0 = _mm_add_ps(m0,target); // integrate relevant elements .... return added multiplied vector to pointer vector
+               _mm_storeu_ps((out + (x+1)+ (y+1)*data_size_X), a0);  //PADDED_out[x+1][y+1] ... add multiplied vector to OUT array (ASSUMING PADDED OUT)
             }
         }
-    
-    
+
+
     /* kern 5*/
-    for (int y =1; y<PADDED_data_size_Y;y+=1) {
-        for (int x=0;x<PADDED_data_size_X;x+=4)) { // ASSUME PADDED IN ARRAY
-            m0 = (_mm_mul_ps(k5, _mm_loadu_si128( (__m128i*)(PADDED_in[x])))); //k5
-            target = _mm_loadu_si128((__m128*)PADDED_out[x+1][y+1]);
-            a0 = _mm_add_epi32(m0,target); // integrate relevant elements .... return added multiplied vector to pointer vector
-            _mm_store_ps128 (( m128i *) PADDED_out[x+1][y+1], add); //add multiplied vector to OUT array (ASSUMING PADDED OUT)
+    for (y =1; y<data_size_Y;y+=1) {
+        for (x=0;x<data_size_X;x+=4) { // ASSUME PADDED IN ARRAY
+            m0 = _mm_mul_ps(k5, _mm_loadu_ps(in+x)); //k5
+            target = _mm_loadu_ps((out+ (x+1) +(y+1)*data_size_X));
+            a0 = _mm_add_ps(m0,target); // integrate relevant elements .... return added multiplied vector to pointer vector
+            _mm_storeu_ps((out + (x+1)+ (y+1)*data_size_X), a0);  //PADDED_out[x+1][y+1] ... add multiplied vector to OUT array (ASSUMING PADDED OUT)
         }
     }
     
     
     /* kern 2*/
-    for (int y =2; y<PADDED_data_size_Y;y+=1) {
-        for (int x=0;x<PADDED_data_size_X;x+=4)) { // ASSUME PADDED IN ARRAY
-            m0 = (_mm_mul_ps(k2, _mm_loadu_si128( (__m128i*)(PADDED_in[x])))); //k2
-            target = _mm_loadu_si128((__m128*)PADDED_out[x+1][y+1]);            
-            a0 = _mm_add_epi32(m0,target); // integrate relevant elements .... return added multiplied vector to pointer vector
-            _mm_store_ps128 (( m128i *) PADDED_out[x+1][y+1], add); //add multiplied vector to OUT array (ASSUMING PADDED OUT)
-        }
-    }
-    
-    
-    
-    
-    
-    
-    
-    /* kern 1, 4, 7 cases*/
-    
-    /*kern1*/
-    for (int y =0; y<PADDED_data_size_Y;y+=1) {
-        for (int x=0;x<(PADDED_data_size_X;x+=4)) {  
-            m0 = (_mm_mul_ps(k1, _mm_loadu_si128( (__m128i*)(PADDED_in[x]))));
-            target = _mm_loadu_si128((__m128*)PADDED_out[x][y+1]);  // for elements in the middle, store directly under: [x,y+1]
-            add = _mm_add_epi32(multiplied,target); 
-            _mm_store_ps128 (( m128i *) PADDED_out[x][y+1], add);  
+    for (y =2; y<data_size_Y;y+=1) {
+        for (x=0;x<data_size_X;x+=4) { // ASSUME PADDED IN ARRAY
+            m0 = _mm_mul_ps(k2, _mm_loadu_ps(in+x));
+            target = _mm_loadu_ps((out+ (x+1) +(y+1)*data_size_X));
+            a0 = _mm_add_ps(m0,target); // integrate relevant elements .... return added multiplied vector to pointer vector
+            _mm_storeu_ps((out + (x+1)+ (y+1)*data_size_X), a0);  //PADDED_out[x+1][y+1] ... add multiplied vector to OUT array (ASSUMING PADDED OUT)
         }
     }
 
-    /*kern4*/
-    for (int y =1; y<PADDED_data_size_Y;y+=1) {
-        for (int x=0;x<(PADDED_data_size_X;x+=4)) {
-            m0 = (_mm_mul_ps(k4, _mm_loadu_si128( (__m128i*)(PADDED_in[x]))));
-            target = _mm_loadu_si128((__m128*)PADDED_out[x][y+1]);  
-            add = _mm_add_epi32(multiplied,target);
-            _mm_store_ps128 (( m128i *) PADDED_out[x][y+1], add);
-        }
-    }
+
+    
+    
+    
+    
+    /* flipped_kern 7, 4, 1 cases*/
     
     /*kern7*/
-
-    for (int y =2; y<PADDED_data_size_Y;y+=1) {
-        for (int x=0;x<(PADDED_data_size_X;x+=4)) {
-            m0 = (_mm_mul_ps(k7, _mm_loadu_si128( (__m128i*)(PADDED_in[x]))));
-            target = _mm_loadu_si128((__m128*)PADDED_out[x][y+1]);
-            add = _mm_add_epi32(multiplied,target);
-            _mm_store_ps128 (( m128i *) PADDED_out[x][y+1], add);
+    for (y=0; y<data_size_Y;y+=1) {
+        for (x=0;x<data_size_X;x+=4) {
+            m0 = _mm_mul_ps(k7, _mm_loadu_ps(in+x));
+            target = _mm_loadu_ps(out+x + (y+1)*data_size_X);  // for elements in the middle, store directly under: [x,y+1]
+            a0 = _mm_add_ps(m0,target);
+            _mm_storeu_ps((out + x+ (y+1)*data_size_X), a0); // out[x][y+1]
+        }
+    }
+    
+    /*kern4*/
+    for (y =1; y<data_size_Y;y+=1) {
+        for (x=0;x<data_size_X;x+=4) {
+            m0 = _mm_mul_ps(k4, _mm_loadu_ps(in+x));
+            target = _mm_loadu_ps(out+x + (y+1)*data_size_X); 
+            a0 = _mm_add_ps(m0,target);
+            _mm_storeu_ps((out + x+ (y+1)*data_size_X), a0); // out[x][y+1]
+        }
+    }
+    
+    /*kern1*/
+    
+    for (y =2; y<data_size_Y;y+=1) {
+        for (x=0;x<data_size_X;x+=4) {
+            m0 = _mm_mul_ps(k1, _mm_loadu_ps(in+x));
+            target = _mm_loadu_ps(out+x + (y+1)*data_size_X); 
+            a0 = _mm_add_ps(m0,target);
+            _mm_storeu_ps((out + x+ (y+1)*data_size_X), a0); // out[x][y+1]
         }
     }
     
@@ -114,41 +116,43 @@ int conv2D(float* in, float* out, int data_size_X, int data_size_Y,
     
     
     
-    /* kern 6, 3, 0 cases*/
+    
+    
+    /* flipped_kern 6, 3, 0 cases*/
     
     /*kern6*/
-    for (int y =0; y<=PADDED_data_size_Y;y+=1) {
-        for (int x=0;x<(PADDED_data_size_X;x+=4)) {
-            m0 = (_mm_mul_ps(k6, _mm_loadu_si128( (__m128i*)(PADDED_in[x]))));
-            target = _mm_loadu_si128((__m128*)PADDED_out[x][y+1]);  // for elements in the middle, store directly under: [x+,y+1]
-            add = _mm_add_epi32(multiplied,target);
-            _mm_store_ps128 (( m128i *) PADDED_out[x][y+1], add);
+    for (y =0; y<data_size_Y;y+=1) {
+        for (x=0;x<data_size_X;x+=4) {
+            m0 = _mm_mul_ps(k6, _mm_loadu_ps(in+x));
+            target = _mm_loadu_ps(out+x + (y-1)*data_size_X);
+            a0 = _mm_add_ps(m0,target);
+           _mm_storeu_ps((out + x+ (y-1)*data_size_X), a0);
         }
     }
     
     /*kern3*/
-    for (int y =1; y<=PADDED_data_size_Y;y+=1) {
-        for (int x=0;x<(PADDED_data_size_X;x+=4)) {
-            m0 = (_mm_mul_ps(k3, _mm_loadu_si128( (__m128i*)(PADDED_in[x]))));
-            target = _mm_loadu_si128((__m128*)PADDED_out[x][y-1]);
-            add = _mm_add_epi32(multiplied,target);
-            _mm_store_ps128 (( m128i *) PADDED_out[x][y+1], add);
+    for (y =1; y<data_size_Y;y+=1) {
+        for (x=0;x<data_size_X;x+=4) {
+            m0 = _mm_mul_ps(k3, _mm_loadu_ps(in+x));
+            target = _mm_loadu_ps(out+x + (y-1)*data_size_X);
+            a0 = _mm_add_ps(m0,target);
+            _mm_storeu_ps((out + x+ (y-1)*data_size_X), a0);
         }
     }
     
     
     /*kern0*/
-    for (int y =2; y<=PADDED_data_size_Y;y+=1) {
-        for (int x=0;x<(PADDED_data_size_X;x+=4)) {
-            m0 = (_mm_mul_ps(k0, _mm_loadu_si128( (__m128i*)(PADDED_in[x]))));
-            target = _mm_loadu_si128((__m128*)PADDED_out[x][y-1]);
-            add = _mm_add_epi32(multiplied,target);
-            _mm_store_ps128 (( m128i *) PADDED_out[x][y+1], add);
+    for (y =2; y<data_size_Y;y+=1) {
+        for (x=0;x<data_size_X;x+=4) {
+            m0 = _mm_mul_ps(k0, _mm_loadu_ps(in+x));
+            target = _mm_loadu_ps(out+x + (y-1)*data_size_X);
+            a0 = _mm_add_ps(m0,target);
+            _mm_storeu_ps((out + x+ (y-1)*data_size_X), a0);
         }
     }
+}
     
-    
-    
+//void _mm_storeu_si128( __m128i *p, __m128i a )
 /*
 
 VISUAL INFORMATION 
